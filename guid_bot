@@ -27,7 +27,7 @@ def SQLBASE(request,):
     result = cursor.fetchall()
     return result
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-bot=telebot.TeleBot("672004513:AAEb-PjK_o7RZMY1g5XcmdEvLNqlhnQbqaI")
+bot=telebot.TeleBot("72004513:AAEb-PjK_o7RZMY1g5XcmdEvLNqlhnQbqaI")
 
 #bot.send_message(220193965,"123")
 temp=bot.get_updates()
