@@ -1,0 +1,154 @@
+import telebot
+import pypyodbc
+import requests
+from math import fabs,pow,sqrt
+
+SQLServer = 'ASUS'
+DATABASE = 'TeleBot'
+
+connection = pypyodbc.connect('Driver={SQL SERVER};'
+                              'Server=' + SQLServer + ';'
+                              'Database=' + DATABASE + ';')
+SQLQueryLviv = ("""
+                    SELECT TOWN, TYPE, NAME,STAT,LATITUDE,LONGITUDE
+                    FROM dbo.pyBot
+                    WHERE TOWN=(?)
+               """)
+def stars(number):
+    mark=""
+    while(number>0):
+        mark+='\U00002B50'
+        number-=1
+    return mark
+
+def SQLBASE(request,):
+    cursor = connection.cursor()
+    cursor.execute(SQLQueryLviv,(request,))
+    result = cursor.fetchall()
+    return result
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+bot=telebot.TeleBot("672004513:AAEb-PjK_o7RZMY1g5XcmdEvLNqlhnQbqaI")
+
+#bot.send_message(220193965,"123")
+temp=bot.get_updates()
+last_upd=temp[-1]
+message_from_user=last_upd.message
+@bot.message_handler(commands=['start'])
+def show_info(message):
+    name = message.from_user.first_name
+    bot.send_message(message.from_user.id,"Hello, "+name+" \U0001F44B\U0001F603 \n\U0001F4DDВідправ мені своє місто і я зможу показати тобі  місця куди можна сходити")
+@bot.message_handler(commands=['town'])
+def show_info(message):
+    user_markup=telebot.types.ReplyKeyboardMarkup(True,True)
+    user_markup.row('Львів','Київ')
+    user_markup.row('Одеса')
+    bot.send_message(message.from_user.id,"Ok",reply_markup=user_markup)
+@bot.message_handler(commands=['place'])
+def show_info(message):
+    user_mark=telebot.types.ReplyKeyboardMarkup(True,True)
+    user_mark.row('Кафе','Кінотеатр')
+    bot.send_message(message.from_user.id,"OK",reply_markup=user_mark)
+
+my_latitude=0.0
+my_longitude=0.0
+@bot.message_handler(content_types=['location'])
+def handle_text (massage):
+    global my_latitude
+    global my_longitude
+    my_latitude=massage.location.latitude
+    my_longitude=massage.location.longitude
+
+    #bot.send_message(massage.chat.id,massage.location.longitude)
+    #bot.send_message(massage.chat.id, massage.location.latitude)
+fabs_latitude_coords = []
+fabs_longitudes_coords = []
+final=[]
+places=[]
+
+@bot.message_handler(content_types=['text'])
+def city(message):
+    if(message.text=='Львів'):
+        request='Львів'
+    elif (message.text == 'Київ'):
+        request = 'Київ'
+    elif (message.text == 'Одеса'):
+        request = 'Одеса'
+    else:
+        return
+    if(request=='Львів'):
+        city='Lviv'
+    elif(request=='Київ'):
+        city='Kiev'
+    elif(request=='Одеса'):
+        city='Odessa'
+
+
+    api_adress = 'https://api.openweathermap.org/data/2.5/weather?appid=ca57766d3380a2e7c8d17c6a466f578b&q='
+    code=',ua'
+    url = api_adress + city+code
+    json_data = requests.get(url).json()
+    data= need_info1 = json_data['weather'][0]['main']
+    print(data)
+    need_info1 = json_data['weather'][0]['description']
+    need_info2 = round((json_data['main']['temp']-273),3)
+    if(data=='Clouds'):
+        smile='\U00002601'
+    elif(data=='Rain'):
+        smile='\U00002614'
+    elif(data=='Clear'):
+         smile='\U00002600'
+    else:
+        smile=' '
+    name = message.from_user.first_name
+    i=0
+    bot.send_message(message.chat.id,"\U0001F310Welcome to "+request+', '+name+' \n\U0001F300Now it is '+need_info1+''+smile+'\n\U0001F525Temperature:'+str(need_info2))
+    places.clear()
+    for row in SQLBASE(request):
+        town = row[0]
+        place = row[1]
+        name=row[2]
+        stat = row[3]
+        latitude=row[4]
+        longitude=row[5]
+
+        fabs_latitude_coords.append(latitude-my_latitude)
+        fabs_longitudes_coords.append(longitude-my_longitude)
+        print(my_latitude)
+        print(my_longitude)
+        final.append(sqrt(pow(fabs_latitude_coords[i],2)+pow(fabs_longitudes_coords[i],2)))
+        # mes = "Welcome to " + town + "\nВи можете піти у " + place +" "+name+"\n"+stars(stat)
+        mes = "Ви можете піти у " + place + " " + name + "\n" + stars(stat)
+        places.append([mes,latitude,longitude,final[i]])
+        i += 1
+
+    places.sort(key=lambda pl:pl[3])
+    print(places)
+    for row in places:
+        bot.send_message(message.chat.id,row)
+        bot.send_location(message.chat.id,row[1],row[2])
+
+
+
+bot.polling(none_stop=True,interval=0)
+connection.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
